@@ -929,10 +929,7 @@ function renderCircuit() {
       ${CFG.physiology.map(r=>`<div class="chip ${pop.physiology.includes(r)?'selected':''}" onclick="toggleArr('physiology','${r}')">${r}</div>`).join('')}
     </div>
     <div style="margin-top:8px;" class="chip-grid">
-      \${pop.physiology.filter(r=>!CFG.physiology.includes(r)).map(r=>`
-        <div class="chip selected" style="background:#555;border-color:#555;">
-          \${r} <span onclick="removeFromArr('physiology','\${r}')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span>
-        </div>`).join('')}
+      ${pop.physiology.filter(r=>!CFG.physiology.includes(r)).map(r=>'<div class="chip selected" style="background:#555;border-color:#555;">'+r+' <span onclick="removeFromArr(\'physiology\',\''+r+'\')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span></div>').join('')}
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
       <input type="text" id="f-physio-other" placeholder="other functional type…" style="max-width:240px;">
@@ -982,10 +979,7 @@ function renderLocation() {
       ${CFG.endingType.map(r=>`<div class="chip ${pop.endingType.includes(r)?'selected':''}" onclick="toggleArr('endingType','${r}')">${r}</div>`).join('')}
     </div>
     <div style="margin-top:8px;" class="chip-grid">
-      \${pop.endingType.filter(r=>!CFG.endingType.includes(r)).map(r=>`
-        <div class="chip selected" style="background:#555;border-color:#555;">
-          \${r} <span onclick="removeFromArr('endingType','\${r}')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span>
-        </div>`).join('')}
+      ${pop.endingType.filter(r=>!CFG.endingType.includes(r)).map(r=>'<div class="chip selected" style="background:#555;border-color:#555;">'+r+' <span onclick="removeFromArr(\'endingType\',\''+r+'\')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span></div>').join('')}
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
       <input type="text" id="f-ending-other" placeholder="other ending type…" style="max-width:240px;">
