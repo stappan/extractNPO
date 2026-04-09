@@ -715,7 +715,7 @@ const CFG = {
 let state = {
   currentSection: 'paper',
   currentPopIndex: 0,
-  paper: { citation:'', doi:'', dataAvailability:'', figureNote:'', firstAuthor:'', year:'', sameSpecies:null, sharedSpecies:[] },
+  paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[] },
   populations: [],
 };
 
@@ -726,22 +726,22 @@ function newPop() {
     name: '', localLabel: '', region: '', species: [],
     // circuit
     isSensory: null,   // true/false/null
+    baseClasses: ['neuron'],  // default; changes to ['cell'] if isSensory===false
     physiology: [],
     physiologyMethod: '',
     // location
-    somaLocation: '',
+    somaLocations: [],        // [{value}] — multi-entry like other locations
     axonPhenotype: [],
     axonPhenotypeMethod: '',
     endingType: [],
+    neurotransmitters: [],
     axonLocations: [],        // [{value}]
     axonLeadingToSensory: [], // [{value}]
     sensoryTerminal: [],      // [{value}]
     axonTerminal: [],         // [{value}]
     locationMethod: '',
-    neurotransmitters: [],
-    ntOther: '',
     // molecular
-    molecularGroups: [],  // [{method, genes:[{name,modifier}], proteins:[{name,modifier}], creLines:[{name}]}]
+    molecularGroups: [],
     // notes
     populationNote: '',
   };
@@ -818,11 +818,17 @@ function renderPaper() {
           style="flex:1;" onblur="lookupDOI()">
         <button class="btn btn-secondary" style="white-space:nowrap;padding:8px 14px;" onclick="lookupDOI()">Look up</button>
       </div>
-      <div id="doi-status" style="font-size:11px;margin-top:4px;color:var(--text2);">${p.doi&&p.citation?'✓ Citation loaded':'Paste a DOI and click Look up to auto-fill.'}</div>
+      <div id="doi-status" style="font-size:11px;margin-top:4px;color:var(--text2);">${p.doi&&p.firstAuthor?'✓ Citation loaded':'Paste a DOI and click Look up to auto-fill.'}</div>
     </div>
-    <div class="field-row">
-      <label class="field-label">Full citation <span style="font-weight:400;opacity:.6">(auto-filled, or type manually)</span></label>
-      <input type="text" id="f-citation" value="${e(p.citation)}" placeholder="e.g. Bhuiyan et al., Science Advances, 2024">
+    <div class="two-col">
+      <div class="field-row">
+        <label class="field-label">First author last name <span style="font-weight:400;opacity:.6">(auto-filled or type)</span></label>
+        <input type="text" id="f-first-author" value="${e(p.firstAuthor)}" placeholder="e.g. Bhuiyan">
+      </div>
+      <div class="field-row">
+        <label class="field-label">Year <span style="font-weight:400;opacity:.6">(auto-filled or type)</span></label>
+        <input type="text" id="f-year" value="${e(p.year)}" placeholder="e.g. 2024" style="max-width:120px;">
+      </div>
     </div>
     <div class="field-row">
       <label class="field-label">Data availability</label>
@@ -908,6 +914,7 @@ function renderIdentity() {
 // ═══════════════════════════════════════════════════════════
 function renderCircuit() {
   const pop = cp();
+  const baseClasses = pop.baseClasses || ['neuron'];
   return `
   ${popNav()}
   <div class="section-header">
@@ -921,6 +928,17 @@ function renderCircuit() {
     <div class="yesno-row">
       <div class="yesno-btn ${pop.isSensory===true?'selected-yes':''}" onclick="setSensory(true)">Yes — sensory</div>
       <div class="yesno-btn ${pop.isSensory===false?'selected-no':''}"  onclick="setSensory(false)">No</div>
+    </div>
+  </div>
+  <div class="form-card ${cc()}">
+    <div class="card-title">Base Class</div>
+    <div class="field-hint" style="margin-bottom:10px;">Default is <strong>neuron</strong> (or <strong>cell</strong> if Not sensory). Add additional base classes as needed.</div>
+    <div class="chip-grid" style="margin-bottom:10px;">
+      ${baseClasses.map((bc,i)=>'<div class="chip selected" style="background:#2d5a3d;border-color:#2d5a3d;">'+bc+(baseClasses.length>1?'<span onclick="removeBaseClass('+i+')" style="cursor:pointer;margin-left:6px;opacity:.8">✕</span>':'')+'</div>').join('')}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="f-base-class-other" placeholder="e.g. interneuron, fibroblast, peptidergic neuron" style="max-width:300px;">
+      <button class="add-btn-sm" onclick="addBaseClass()">Add</button>
     </div>
   </div>
   <div class="form-card ${cc()}">
@@ -951,6 +969,10 @@ function renderCircuit() {
 // ═══════════════════════════════════════════════════════════
 function renderLocation() {
   const pop = cp();
+  // Pre-populate somaLocations from region if still empty
+  if ((!pop.somaLocations || pop.somaLocations.length === 0) && pop.region) {
+    pop.somaLocations = [{value: pop.region}];
+  }
   return `
   ${popNav()}
   <div class="section-header">
@@ -958,7 +980,6 @@ function renderLocation() {
     <div class="section-title">Location &amp; Morphology</div>
   </div>
 
-  <!-- Fiber type at top, with its own method -->
   <div class="form-card ${cc()}">
     <div class="card-title">Axon / Fiber Type</div>
     <div class="chip-grid">
@@ -972,7 +993,27 @@ function renderLocation() {
     </div>
   </div>
 
-  <!-- Ending type -->
+  <div class="form-card ${cc()}">
+    <div class="card-title">Neurotransmitter</div>
+    <div class="chip-grid">
+      ${CFG.neurotransmitter.map(r=>`<div class="chip ${(pop.neurotransmitters||[]).includes(r)?'selected':''}" onclick="toggleArr('neurotransmitters','${r}')">${r}</div>`).join('')}
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <input type="text" id="f-nt-other" placeholder="other neurotransmitter…" style="max-width:200px;">
+      <button class="add-btn-sm" onclick="addOtherToArr('neurotransmitters','f-nt-other')">Add</button>
+    </div>
+    <div style="margin-top:6px;" class="chip-grid">
+      ${(pop.neurotransmitters||[]).filter(n=>!CFG.neurotransmitter.includes(n)).map(n=>'<div class="chip selected" style="background:#555;border-color:#555;">'+n+' <span onclick="removeFromArr(\'neurotransmitters\',\''+n+'\')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span></div>').join('')}
+    </div>
+  </div>
+
+  <div class="form-card ${cc()}">
+    <div class="card-title">Method for Location Data</div>
+    <div class="chip-grid">
+      ${CFG.methodLocation.map(m=>`<div class="chip ${pop.locationMethod===m?'selected':''}" onclick="setSingle('locationMethod','${m}')">${m}</div>`).join('')}
+    </div>
+  </div>
+
   <div class="form-card ${cc()}">
     <div class="card-title">Ending Type</div>
     <div class="chip-grid">
@@ -987,11 +1028,13 @@ function renderLocation() {
     </div>
   </div>
 
-  <!-- Location entries -->
   <div class="form-card ${cc()}">
     <div class="card-title">Soma Location</div>
-    <div class="preset-row">${CFG.somaPresets.map(s=>`<span class="preset-chip" onclick="setTextField('f-somaLoc','${s}')">${s}</span>`).join('')}</div>
-    <input type="text" id="f-somaLoc" value="${e(pop.somaLocation)}" placeholder="type or select above">
+    <div class="preset-row">${CFG.somaPresets.map(s=>`<span class="preset-chip" onclick="addPresetLoc('somaLocations','${s}')">${s}</span>`).join('')}</div>
+    <div class="feature-list" id="list-somaLocations">
+      ${(pop.somaLocations||[]).map((it,i)=>locCard('somaLocations',i,it.value,[])).join('')}
+    </div>
+    <button class="add-btn" onclick="addLocEntry('somaLocations')">＋ Add soma location</button>
   </div>
 
   <div class="form-card ${cc()}">
@@ -1028,42 +1071,10 @@ function renderLocation() {
     <button class="add-btn" onclick="addLocEntry('axonTerminal')">＋ Add location</button>
   </div>
 
-  <div class="form-card ${cc()}">
-    <div class="card-title">Method for Location Data</div>
-    <div class="chip-grid">
-      ${CFG.methodLocation.map(m=>`<div class="chip ${pop.locationMethod===m?'selected':''}" onclick="setSingle('locationMethod','${m}')">${m}</div>`).join('')}
-    </div>
-  </div>
-
-  <!-- Neurotransmitter moved here -->
-  <div class="form-card ${cc()}">
-    <div class="card-title">Neurotransmitter</div>
-    <div class="chip-grid">
-      ${CFG.neurotransmitter.map(r=>`<div class="chip ${(pop.neurotransmitters||[]).includes(r)?'selected':''}" onclick="toggleArr('neurotransmitters','${r}')">${r}</div>`).join('')}
-    </div>
-    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-      <input type="text" id="f-nt-other" placeholder="other neurotransmitter…" style="max-width:200px;">
-      <button class="add-btn-sm" onclick="addOtherToArr('neurotransmitters','f-nt-other')">Add</button>
-    </div>
-    <div style="margin-top:6px;" class="chip-grid">
-      ${(pop.neurotransmitters||[]).filter(n=>!CFG.neurotransmitter.includes(n)).map(n=>'<div class="chip selected" style="background:#555;border-color:#555;">'+n+' <span onclick="removeFromArr(\'neurotransmitters\',\''+n+'\')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span></div>').join('')}
-    </div>
-  </div>
-
   ${navBtns('circuit','molecular')}`;
 }
 
-function locCard(field, i, val, presets) {
-  return `<div class="loc-card" id="lc-${field}-${i}">
-    <input type="text" value="${e(val)}" placeholder="location name"
-      onchange="updateLocEntry('${field}',${i},this.value)">
-    <button class="remove-btn" onclick="removeLocEntry('${field}',${i})" title="Remove">✕</button>
-  </div>`;
-}
 
-// ═══════════════════════════════════════════════════════════
-// SECTION: MOLECULAR PROFILE
-// ═══════════════════════════════════════════════════════════
 function renderMolecular() {
   const pop = cp();
   const groups = pop.molecularGroups||[];
@@ -1215,10 +1226,11 @@ function saveCurrent() {
   const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
 
   if (s==='paper') {
-    state.paper.citation = gv('f-citation');
-    state.paper.doi      = gv('f-doi');
+    state.paper.firstAuthor  = gv('f-first-author');
+    state.paper.year         = gv('f-year');
+    state.paper.doi          = gv('f-doi');
     state.paper.dataAvailability = gv('f-data');
-    state.paper.figureNote = gv('f-figure');
+    state.paper.figureNote   = gv('f-figure');
     const sso = gv('f-shared-species-other');
     if (sso && !(state.paper.sharedSpecies||[]).includes(sso)) {
       if (!state.paper.sharedSpecies) state.paper.sharedSpecies=[];
@@ -1237,10 +1249,9 @@ function saveCurrent() {
     if (po && !pop.physiology.includes(po)) pop.physiology.push(po);
   }
   else if (s==='location') {
-    pop.somaLocation = gv('f-somaLoc');
     const eo = gv('f-ending-other');
     if (eo && !pop.endingType.includes(eo)) pop.endingType.push(eo);
-    // ntOther now handled via addOtherToArr into neurotransmitters array
+    // somaLocations, neurotransmitters handled via addLocEntry/addOtherToArr
   }
   else if (s==='notes') {
     pop.populationNote = gv('f-popnote');
@@ -1284,6 +1295,31 @@ function addOtherToArr(field, inputId) {
   }
 }
 
+function addBaseClass() {
+  const el = document.getElementById('f-base-class-other');
+  if (!el) return;
+  const val = el.value.trim();
+  if (!val) return;
+  const pop = cp();
+  if (!pop.baseClasses) pop.baseClasses = ['neuron'];
+  if (!pop.baseClasses.includes(val)) {
+    pop.baseClasses.push(val);
+    saveCurrent();
+    el.value = '';
+    render();
+  } else {
+    el.value = '';
+  }
+}
+
+function removeBaseClass(i) {
+  const pop = cp();
+  if (!pop.baseClasses || pop.baseClasses.length <= 1) return; // keep at least one
+  pop.baseClasses.splice(i, 1);
+  saveCurrent();
+  render();
+}
+
 function removePopulation(i) {
   if (state.populations.length <= 1) {
     alert('You need at least one population. Use New Session to start over.');
@@ -1308,7 +1344,17 @@ function setSingle(field, val) {
 
 function setSensory(val) {
   const pop = cp();
+  const prev = pop.isSensory;
   pop.isSensory = (pop.isSensory===val)?null:val;
+  // Update default base class when answer changes
+  // Only change if baseClasses still contains the auto-default (not manually edited)
+  const wasNeuron = prev!==false;
+  const isNowCell = pop.isSensory===false;
+  if (wasNeuron && isNowCell && JSON.stringify(pop.baseClasses)==='["neuron"]') {
+    pop.baseClasses = ['cell'];
+  } else if (!isNowCell && JSON.stringify(pop.baseClasses)==='["cell"]') {
+    pop.baseClasses = ['neuron'];
+  }
   saveCurrent(); render();
 }
 
@@ -1418,9 +1464,7 @@ function authorYear() {
   if (state.paper.firstAuthor && state.paper.year) {
     return state.paper.firstAuthor + state.paper.year;
   }
-  const cit = state.paper.citation||'';
-  const m = cit.match(/(\w+)\s+et\s+al\.\S*\s+(\d{4})/) || cit.match(/(\w+)[,\s]+(\d{4})/);
-  return m ? m[1]+m[2] : '';
+  return '';
 }
 
 function e(s) {
@@ -1521,13 +1565,18 @@ function buildRows() {
         rows.push({ neuronId, relationType:'preferred label', valueLabel:pref,   npoProperty:'skos:prefLabel',       iri:'', methodSet:'', intersect:'', modifier:'', method:'' });
         rows.push({ neuronId, relationType:'local label',     valueLabel:local,  npoProperty:'ilxtr:localLabel',     iri:'', methodSet:'', intersect:'', modifier:'', method:'' });
       }
-      rows.push({ neuronId, relationType:'base class', valueLabel:'neuron', npoProperty:'ilxtr:neurondmBaseClass', iri:'', methodSet:'', intersect:'', modifier:'', method:'' });
+      // base classes — one row per entry in pop.baseClasses
+      const baseClasses = pop.baseClasses && pop.baseClasses.length ? pop.baseClasses : ['neuron'];
+      baseClasses.forEach(bc => {
+        rows.push({ neuronId, relationType:'base class', valueLabel:bc, npoProperty:'ilxtr:neurondmBaseClass', iri:'', methodSet:'', intersect:'', modifier:'', method:'' });
+      });
 
-      if (state.paper.citation||state.paper.doi) {
-        rows.push({ neuronId, relationType:'source nomenclature', valueLabel:state.paper.citation, npoProperty:'ilxtr:literatureCitation', iri:state.paper.doi, methodSet:'', intersect:'', modifier:'', method:'' });
+      const citationLabel = [state.paper.firstAuthor, state.paper.year].filter(Boolean).join(' ') || state.paper.doi || '';
+      if (citationLabel || state.paper.doi) {
+        rows.push({ neuronId, relationType:'source nomenclature', valueLabel:citationLabel, npoProperty:'ilxtr:literatureCitation', iri:state.paper.doi||'', methodSet:'', intersect:'', modifier:'', method:'' });
       }
       if (state.paper.dataAvailability) {
-        rows.push({ neuronId, relationType:'Source Data', valueLabel:state.paper.citation, npoProperty:'ilxtr:dataCitation', iri:state.paper.dataAvailability, methodSet:'', intersect:'', modifier:'', method:'' });
+        rows.push({ neuronId, relationType:'Source Data', valueLabel:citationLabel, npoProperty:'ilxtr:dataCitation', iri:state.paper.dataAvailability, methodSet:'', intersect:'', modifier:'', method:'' });
       }
       if (sp) {
         const s = IRI.species[sp]||{};
@@ -1580,10 +1629,15 @@ function buildRows() {
 
         // ── MS 3: Location / morphology ─────────────────────────────────────
         if (msNum === 3) {
-          if (pop.somaLocation) {
-            const s = IRI.somaLocation[pop.somaLocation]||{};
-            rows.push({ neuronId, relationType:'soma location', valueLabel:pop.somaLocation, npoProperty:s.npo||'ilxtr:hasSomaLocatedIn', iri:s.iri||'', methodSet:msNum, intersect:1, modifier:'', method:ms.method });
-          }
+          // soma locations — array, each gets its own row
+          const somaLocs = pop.somaLocations && pop.somaLocations.length
+            ? pop.somaLocations.filter(x=>x.value)
+            : (pop.somaLocation ? [{value:pop.somaLocation}] : []); // fallback for old sessions
+          const needsSomaIntersect = somaLocs.length > 1;
+          somaLocs.forEach(x => {
+            const s = IRI.somaLocation[x.value]||{};
+            rows.push({ neuronId, relationType:'soma location', valueLabel:x.value, npoProperty:s.npo||'ilxtr:hasSomaLocatedIn', iri:s.iri||'', methodSet:msNum, intersect:needsSomaIntersect?1:'', union:'', modifier:'', method:ms.method });
+          });
           pop.endingType.forEach(r => {
             const s = IRI.endingType[r]||{};
             rows.push({ neuronId, relationType:'ending type', valueLabel:r, npoProperty:s.npo||'', iri:s.iri||'', methodSet:msNum, intersect:1, modifier:'', method:ms.method });
@@ -1704,17 +1758,17 @@ function saveSession() {
     const payload = JSON.stringify(state);
     // Save to localStorage as auto-backup
     localStorage.setItem(LS_KEY, payload);
-    const meta = { savedAt: new Date().toISOString(), citation: state.paper.citation||'Untitled', pops: state.populations.length };
+    const meta = { savedAt: new Date().toISOString(), citation: (state.paper.firstAuthor||'') + (state.paper.year?' '+state.paper.year:'') || 'Untitled', pops: state.populations.length };
     localStorage.setItem(LS_META_KEY, JSON.stringify(meta));
 
     // Also trigger a file download
     const blob = new Blob([payload], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    const safeName = (state.paper.firstAuthor||'session').replace(/[^a-zA-Z0-9]/g,'_');
+    const safeName = ((state.paper.firstAuthor||'') + (state.paper.year||'') || 'session').replace(/[^a-zA-Z0-9]/g,'_');
     const dateStr  = new Date().toISOString().slice(0,10);
     a.href     = url;
-    a.download = `npo_survey_${safeName}_${dateStr}.json`;
+    a.download = `extractNPO_${safeName}_${dateStr}.json`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -1808,7 +1862,7 @@ function newSession() {
   state = {
     currentSection: 'paper',
     currentPopIndex: 0,
-    paper: { citation:'', doi:'', dataAvailability:'', figureNote:'', firstAuthor:'', year:'', sameSpecies:null, sharedSpecies:[] },
+    paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[] },
     populations: [newPop()],
   };
   hideBanner();
@@ -1821,7 +1875,7 @@ function autoSaveLocal() {
   try {
     const payload = JSON.stringify(state);
     localStorage.setItem(LS_KEY, payload);
-    const meta = { savedAt: new Date().toISOString(), citation: state.paper.citation||'Untitled', pops: state.populations.length };
+    const meta = { savedAt: new Date().toISOString(), citation: (state.paper.firstAuthor||'') + (state.paper.year?' '+state.paper.year:'') || 'Untitled', pops: state.populations.length };
     localStorage.setItem(LS_META_KEY, JSON.stringify(meta));
   } catch(e) { /* storage full or unavailable — silent */ }
 }
@@ -1864,20 +1918,19 @@ async function lookupDOI() {
     const journal = (msg['container-title'] || [])[0] ||
                     (msg['short-container-title'] || [])[0] || '';
 
-    const authorStr = authors.length > 1 ? `${familyName} et al.` : familyName;
-    const citation  = [authorStr, journal, year].filter(Boolean).join(', ');
     const canonicalDoi = `https://doi.org/${doi}`;
 
     state.paper.doi         = canonicalDoi;
-    state.paper.citation    = citation;
     state.paper.firstAuthor = familyName;
     state.paper.year        = year;
 
     doiField.value = canonicalDoi;
-    const citField = document.getElementById('f-citation');
-    if (citField) citField.value = citation;
+    const faField = document.getElementById('f-first-author');
+    if (faField) faField.value = familyName;
+    const yrField = document.getElementById('f-year');
+    if (yrField) yrField.value = year;
 
-    statusEl.textContent = `✓ ${authorStr}${year ? ', ' + year : ''} — ${journal || 'journal not found'}`;
+    statusEl.textContent = `✓ ${familyName}${year ? ' ' + year : ''} — ${journal || 'journal not found'}`;
     statusEl.style.color = 'var(--accent)';
 
   } catch (err) {
