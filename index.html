@@ -621,93 +621,44 @@
 // ═══════════════════════════════════════════════════════════
 // CONFIG  — IRI lookup tables, invisible to researcher
 // ═══════════════════════════════════════════════════════════
-const IRI = {
-  species: {
-    'mouse':      { iri:'http://purl.obolibrary.org/obo/NCBITaxon_10090', npo:'ilxtr:hasInstanceInTaxon' },
-    'human':      { iri:'http://purl.obolibrary.org/obo/NCBITaxon_9606',  npo:'ilxtr:hasInstanceInTaxon' },
-    'macaque':    { iri:'http://purl.obolibrary.org/obo/NCBITaxon_9544',  npo:'ilxtr:hasInstanceInTaxon' },
-    'guinea pig': { iri:'http://purl.obolibrary.org/obo/NCBITaxon_10141', npo:'ilxtr:hasInstanceInTaxon' },
-    'rat':        { iri:'http://purl.obolibrary.org/obo/NCBITaxon_10116', npo:'ilxtr:hasInstanceInTaxon' },
-  },
-  circuitRole: {
-    'sensory': { iri:'http://uri.interlex.org/tgbugs/uris/readable/SensoryPhenotype', npo:'ilxtr:hasCircuitRolePhenotype' },
-  },
-  physiology: {
-    'proprioceptive':                   { iri:'http://uri.interlex.org/base/ilx_0796531', npo:'ilxtr:isMemberOfCircuit' },
-    'nociceptive':                      { iri:'http://uri.interlex.org/base/ilx_0796530', npo:'ilxtr:isMemberOfCircuit' },
-    'pruritogenic':                     { iri:'http://uri.interlex.org/base/ilx_0797452', npo:'ilxtr:isMemberOfCircuit' },
-    'low-threshold mechanosensitivity': { iri:'http://uri.interlex.org/base/ilx_0796525', npo:'ilxtr:hasThresholdPhenotype' },
-    'high-threshold mechanosensitivity':{ iri:'http://uri.interlex.org/base/ilx_0796526', npo:'ilxtr:hasThresholdPhenotype' },
-    'rapidly adapting':                 { iri:'http://uri.interlex.org/base/ilx_0796518', npo:'ilxtr:hasAdaptationPhenotype' },
-    'slowly adapting type 1 (SA1)':     { iri:'http://uri.interlex.org/base/ilx_0796517', npo:'ilxtr:hasAdaptationPhenotype' },
-    'mechanosensitive':                 { iri:'http://uri.interlex.org/base/ilx_0797460', npo:'ilxtr:hasFunctionalPhenotype' },
-    'cold sensitive':                   { iri:'http://uri.interlex.org/base/ilx_0796527', npo:'ilxtr:hasFunctionalPhenotype' },
-    'heat-sensitive':                   { iri:'http://uri.interlex.org/base/ilx_0796528', npo:'ilxtr:hasFunctionalPhenotype' },
-    'warm-sensitive':                   { iri:null,                                        npo:'ilxtr:hasFunctionalPhenotype' },
-    'field-type cutaneous mechanosensitivity':{ iri:'http://uri.interlex.org/base/ilx_0796527', npo:'ilxtr:hasFunctionalPhenotype' },
-  },
-  axonPhenotype: {
-    'type A nerve fiber':         { iri:'http://uri.interlex.org/base/ilx_0796510', npo:'ilxtr:hasAxonPhenotype' },
-    'type Aβ (beta) nerve fiber': { iri:'http://uri.interlex.org/base/ilx_0796512', npo:'ilxtr:hasAxonPhenotype' },
-    'type Aδ (delta) nerve fiber':{ iri:'http://uri.interlex.org/base/ilx_0796514', npo:'ilxtr:hasAxonPhenotype' },
-    'type C nerve fiber':         { iri:'http://uri.interlex.org/base/ilx_0796516', npo:'ilxtr:hasAxonPhenotype' },
-  },
-  endingType: {
-    'free nerve ending':                    { iri:'http://purl.obolibrary.org/obo/UBERON_0035501', npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-    'lanceolate':                           { iri:null, npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-    'lanceolate Meissner corpuscles':       { iri:'http://uri.interlex.org/base/ilx_0106756', npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-    'Pacinian corpuscles':                  { iri:'http://uri.interlex.org/base/ilx_0485922', npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-    'Merkel disc':                          { iri:'http://uri.interlex.org/base/ilx_0106806', npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-    'circumferential':                      { iri:null, npo:'ilxtr:hasAxonSensorySubcellularStructure' },
-  },
-  somaLocation: {
-    'dorsal root ganglion':         { iri:'http://purl.obolibrary.org/obo/UBERON_0000044', npo:'ilxtr:hasSomaLocatedIn' },
-    'trigeminal ganglion':          { iri:'http://purl.obolibrary.org/obo/UBERON_0001675', npo:'ilxtr:hasSomaLocatedIn' },
-    'nodose ganglion':              { iri:null, npo:'ilxtr:hasSomaLocatedIn' },
-    'jugular ganglion':             { iri:null, npo:'ilxtr:hasSomaLocatedIn' },
-    'nodose jugular ganglion complex':{ iri:null, npo:'ilxtr:hasSomaLocatedIn' },
-  },
-  axonTerminal: {
-    'lamina I':   { iri:'http://purl.obolibrary.org/obo/UBERON_0006118', npo:'ilxtr:hasAxonPresynapticElementIn' },
-    'lamina IIo': { iri:'http://uri.interlex.org/base/ilx_0110092',       npo:'ilxtr:hasAxonPresynapticElementIn' },
-    'lamina IIi': { iri:'http://uri.interlex.org/base/ilx_0110092',       npo:'ilxtr:hasAxonPresynapticElementIn' },
-    'lamina III': { iri:'http://uri.interlex.org/base/ilx_0110093',       npo:'ilxtr:hasAxonPresynapticElementIn' },
-    'lamina IV':  { iri:'http://uri.interlex.org/base/ilx_0110094',       npo:'ilxtr:hasAxonPresynapticElementIn' },
-    'NTS':        { iri:null, npo:'ilxtr:hasAxonTerminalIn' },
-    'Pa5':        { iri:null, npo:'ilxtr:hasAxonTerminalIn' },
-  },
-  sensoryTerminal: {
-    'epidermis':        { iri:'http://purl.obolibrary.org/obo/UBERON_0001003', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'dermis':           { iri:'http://purl.obolibrary.org/obo/UBERON_0002067', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'hairy skin':       { iri:'http://purl.obolibrary.org/obo/UBERON_0002097', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'glabrous skin':    { iri:null, npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'skin hair follicles':{ iri:'http://purl.obolibrary.org/obo/UBERON_0002073', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'bladder':          { iri:'http://purl.obolibrary.org/obo/UBERON_0001255', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-    'colon':            { iri:'http://purl.obolibrary.org/obo/UBERON_0001155', npo:'ilxtr:hasAxonSensorySubcellularElementIn' },
-  },
-  neurotransmitter: {
-    'peptide':      { iri:'http://purl.obolibrary.org/obo/CHEBI_16670', npo:'ilxtr:hasNeurotransmitterPhenotype' },
-    'glutamate':    { iri:null, npo:'ilxtr:hasNeurotransmitterPhenotype' },
-    'GABA':         { iri:null, npo:'ilxtr:hasNeurotransmitterPhenotype' },
-    'acetylcholine':{ iri:null, npo:'ilxtr:hasNeurotransmitterPhenotype' },
-  },
+// ═══════════════════════════════════════════════════════════
+// VOCABULARY — loaded from vocabulary.json at startup
+// To update terms, edit vocabulary.json (not this file)
+// ═══════════════════════════════════════════════════════════
+// Safe empty structures — .map() works on [] but throws on undefined
+// These get replaced with real data when vocabulary.json loads
+let IRI = {
+  species:{}, circuitRole:{}, physiology:{}, axonPhenotype:{},
+  endingType:{}, somaLocation:{}, axonTerminal:{}, sensoryTerminal:{}, neurotransmitter:{}
 };
+let CFG = {
+  species:[], physiology:[], axonPhenotype:[], endingType:[],
+  somaPresets:[], axonTerminalPresets:[], sensoryTerminalPresets:[],
+  neurotransmitter:[], methodLocation:[], methodFiberType:[],
+  methodGene:[], methodProtein:[], methodCre:[]
+};
+let VOCAB_LOADED = false;
 
-const CFG = {
-  species:      ['mouse','human','macaque','guinea pig','rat'],
-  physiology:   ['proprioceptive','nociceptive','pruritogenic','low-threshold mechanosensitivity','high-threshold mechanosensitivity','rapidly adapting','slowly adapting type 1 (SA1)','mechanosensitive','cold sensitive','heat-sensitive','warm-sensitive','field-type cutaneous mechanosensitivity'],
-  axonPhenotype:['type A nerve fiber','type Aβ (beta) nerve fiber','type Aδ (delta) nerve fiber','type C nerve fiber'],
-  endingType:   ['free nerve ending','lanceolate','lanceolate Meissner corpuscles','Pacinian corpuscles','Merkel disc','circumferential'],
-  somaPresets:  ['dorsal root ganglion','trigeminal ganglion','nodose ganglion','jugular ganglion','nodose jugular ganglion complex'],
-  axonTerminalPresets: ['lamina I','lamina IIo','lamina IIi','lamina III','lamina IV','NTS','Pa5'],
-  sensoryTerminalPresets: ['epidermis','dermis','hairy skin','glabrous skin','skin hair follicles','bladder','colon'],
-  neurotransmitter: ['peptide','glutamate','GABA','acetylcholine'],
-  methodLocation:   ['anterograde tracing','retrograde tracing','confocal microscopy','electron microscopy','immunohistochemistry (IHC)','other morphology'],
-  methodFiberType:  ['electrophysiology / patch clamp','extracellular recording','microneurography','soma size measurement','axon diameter measurement','inferred from marker expression','other'],
-  methodGene:       ['scRNA-seq','snRNA-seq','smFISH / RNAscope','ISH','bulk RNA-seq','RT-PCR','other transcriptomic'],
-  methodProtein:    ['immunohistochemistry (IHC)','immunofluorescence (IF)','flow cytometry','western blot','other protein'],
-  methodCre:        ['Cre-dependent reporter','intersectional genetics','other'],
-};
+async function loadVocabulary() {
+  try {
+    const res = await fetch('./vocabulary.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const vocab = await res.json();
+    IRI = vocab.IRI || {};
+    CFG = vocab.CFG || {};
+    VOCAB_LOADED = true;
+  } catch (err) {
+    console.error('Failed to load vocabulary.json:', err);
+    // Show a non-blocking warning in the UI
+    const warn = document.createElement('div');
+    warn.style.cssText = 'position:fixed;top:0;left:0;right:0;padding:10px 20px;background:#7a3b1e;color:white;font-size:13px;z-index:9999;';
+    warn.textContent = '⚠ Could not load vocabulary.json — check that the file is in the same folder as index.html. The app will have empty option lists.';
+    document.body.prepend(warn);
+    // Set empty fallbacks so app doesn't crash
+    IRI = { species:{}, circuitRole:{}, physiology:{}, axonPhenotype:{}, endingType:{}, somaLocation:{}, axonTerminal:{}, sensoryTerminal:{}, neurotransmitter:{} };
+    CFG = { species:[], physiology:[], axonPhenotype:[], endingType:[], somaPresets:[], axonTerminalPresets:[], sensoryTerminalPresets:[], neurotransmitter:[], methodLocation:[], methodFiberType:[], methodGene:[], methodProtein:[], methodCre:[] };
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -753,6 +704,14 @@ state.populations.push(newPop());
 // RENDER
 // ═══════════════════════════════════════════════════════════
 function render() {
+  // Guard: if vocabulary isn't loaded yet, show a brief loading state
+  // This prevents .map() on undefined when CFG/IRI are still empty
+  if (!VOCAB_LOADED) {
+    const main = document.getElementById('main-content');
+    if (main) main.innerHTML = '<div style="padding:48px;color:var(--text2);font-family:var(--mono);font-size:12px;">Loading vocabulary…</div>';
+    updateSidebar();
+    return;
+  }
   updateSidebar();
   const main = document.getElementById('main-content');
   const s = state.currentSection;
@@ -1852,7 +1811,7 @@ const _origSetPop = setPopulation;
 setPopulation = function(i) { _origSetPop(i); autoSaveLocal(); };
 
 function newSession() {
-  const hasData = state.paper.citation || state.populations.some(p => p.name || p.localLabel);
+  const hasData = (state.paper.firstAuthor || state.paper.year) || state.populations.some(p => p.name || p.localLabel);
   if (hasData) {
     const ok = window.confirm('Start a new session? Your current work will be lost unless you have saved it as a .json file.');
     if (!ok) return;
@@ -1898,9 +1857,7 @@ async function lookupDOI() {
   statusEl.style.color = 'var(--text2)';
 
   try {
-    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`, {
-      headers: { 'User-Agent': 'extractNPO/1.0 (mailto:curator@example.org)' }
-    });
+    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}`);
     if (!res.ok) throw new Error(`CrossRef returned ${res.status}`);
     const json = await res.json();
     const msg = json.message;
@@ -1940,7 +1897,10 @@ async function lookupDOI() {
 }
 
 // ── INIT ──
-(function init() {
+async function init() {
+  // Load vocabulary first, then render
+  await loadVocabulary();
+
   // Check for an existing localStorage session and offer to restore
   try {
     const raw  = localStorage.getItem(LS_KEY);
@@ -1948,7 +1908,7 @@ async function lookupDOI() {
     if (raw) {
       const parsed = JSON.parse(raw);
       // Only show banner if there's meaningful data
-      const hasCitation = parsed.paper?.citation;
+      const hasCitation = parsed.paper?.firstAuthor || parsed.paper?.citation; // support old sessions
       const hasPops     = parsed.populations?.some(p => p.name||p.localLabel);
       if (hasCitation || hasPops) {
         const banner = document.getElementById('restore-banner');
@@ -1964,7 +1924,9 @@ async function lookupDOI() {
     }
   } catch(e) { /* localStorage unavailable */ }
   render();
-})();
+}
+
+init();
 </script>
 </div><!-- session wrapper -->
 </body>
