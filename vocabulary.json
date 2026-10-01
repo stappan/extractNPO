@@ -23,6 +23,16 @@
         "npo": "ilxtr:hasInstanceInTaxon"
       }
     },
+    "sex": {
+      "male": {
+        "iri": "http://purl.obolibrary.org/obo/PATO_0000384",
+        "npo": "ilxtr:hasBiologicalSex"
+      },
+      "female": {
+        "iri": "http://purl.obolibrary.org/obo/PATO_0000383",
+        "npo": "ilxtr:hasBiologicalSex"
+      }
+    },
     "circuitRole": {
       "sensory": {
         "iri": "http://uri.interlex.org/tgbugs/uris/readable/SensoryPhenotype",
@@ -233,6 +243,11 @@
       "guinea pig",
       "rat"
     ],
+    "sex": [
+      "male",
+      "female",
+      "not reported"
+    ],
     "physiology": [
       "proprioceptive",
       "nociceptive",
@@ -299,6 +314,14 @@
       "electron microscopy",
       "immunohistochemistry (IHC)",
       "other morphology"
+    ],
+    "methodPhysiology": [
+      "patch clamp",
+      "extracellular recording",
+      "microneurography",
+      "calcium imaging",
+      "tracing / anatomy",
+      "inferred from molecular profile"
     ],
     "methodFiberType": [
       "electrophysiology / patch clamp",

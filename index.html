@@ -628,13 +628,13 @@
 // Safe empty structures — .map() works on [] but throws on undefined
 // These get replaced with real data when vocabulary.json loads
 let IRI = {
-  species:{}, circuitRole:{}, physiology:{}, axonPhenotype:{},
+  species:{}, sex:{}, circuitRole:{}, physiology:{}, axonPhenotype:{},
   endingType:{}, somaLocation:{}, axonTerminal:{}, sensoryTerminal:{}, neurotransmitter:{}
 };
 let CFG = {
-  species:[], physiology:[], axonPhenotype:[], endingType:[],
+  species:[], sex:[], physiology:[], axonPhenotype:[], endingType:[],
   somaPresets:[], axonTerminalPresets:[], sensoryTerminalPresets:[],
-  neurotransmitter:[], methodLocation:[], methodFiberType:[],
+  neurotransmitter:[], methodLocation:[], methodPhysiology:[], methodFiberType:[],
   methodGene:[], methodProtein:[], methodCre:[]
 };
 let VOCAB_LOADED = false;
@@ -644,8 +644,9 @@ async function loadVocabulary() {
     const res = await fetch('./vocabulary.json');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const vocab = await res.json();
-    IRI = vocab.IRI || {};
-    CFG = vocab.CFG || {};
+    // merge over the empty defaults so a key missing from vocabulary.json can't crash a render
+    IRI = { ...IRI, ...(vocab.IRI || {}) };
+    CFG = { ...CFG, ...(vocab.CFG || {}) };
     VOCAB_LOADED = true;
   } catch (err) {
     console.error('Failed to load vocabulary.json:', err);
@@ -655,8 +656,8 @@ async function loadVocabulary() {
     warn.textContent = '⚠ Could not load vocabulary.json — check that the file is in the same folder as index.html. The app will have empty option lists.';
     document.body.prepend(warn);
     // Set empty fallbacks so app doesn't crash
-    IRI = { species:{}, circuitRole:{}, physiology:{}, axonPhenotype:{}, endingType:{}, somaLocation:{}, axonTerminal:{}, sensoryTerminal:{}, neurotransmitter:{} };
-    CFG = { species:[], physiology:[], axonPhenotype:[], endingType:[], somaPresets:[], axonTerminalPresets:[], sensoryTerminalPresets:[], neurotransmitter:[], methodLocation:[], methodFiberType:[], methodGene:[], methodProtein:[], methodCre:[] };
+    IRI = { species:{}, sex:{}, circuitRole:{}, physiology:{}, axonPhenotype:{}, endingType:{}, somaLocation:{}, axonTerminal:{}, sensoryTerminal:{}, neurotransmitter:{} };
+    CFG = { species:[], sex:[], physiology:[], axonPhenotype:[], endingType:[], somaPresets:[], axonTerminalPresets:[], sensoryTerminalPresets:[], neurotransmitter:[], methodLocation:[], methodPhysiology:[], methodFiberType:[], methodGene:[], methodProtein:[], methodCre:[] };
   }
 }
 
@@ -666,7 +667,7 @@ async function loadVocabulary() {
 let state = {
   currentSection: 'paper',
   currentPopIndex: 0,
-  paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[] },
+  paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[], demographics:{} },
   populations: [],
 };
 
@@ -819,6 +820,14 @@ function renderPaper() {
         <input type="text" id="f-shared-species-other" placeholder="other species…" style="max-width:220px;">
       </div>
     </div>` : ''}
+    ${state.paper.sameSpecies!==null ? `
+    <div style="margin-top:18px;">
+      <label class="field-label">Subjects (age range &amp; sex, per species)</label>
+      ${paperSpeciesList().length ? renderDemographics(paperSpeciesList()) :
+        `<div class="field-hint">${state.paper.sameSpecies===true
+          ? 'Select a species above to enter subject details.'
+          : 'Species are chosen per population in the Identity step — subject details can be entered there, and will be listed here.'}</div>`}
+    </div>` : ''}
   </div>
   <div class="btn-row">
     <button class="btn btn-primary" onclick="goSection('identity')">Continue →</button>
@@ -864,6 +873,12 @@ function renderIdentity() {
       <input type="text" id="f-species-other" placeholder="other species…" style="max-width:200px;">
       <button class="add-btn-sm" onclick="addOtherToArr(\'species\',\'f-species-other\')">Add</button>
     </div>
+    ${pop.species.length ? `
+    <div style="margin-top:16px;">
+      <label class="field-label">Subjects (age range &amp; sex, per species)</label>
+      <div class="field-hint" style="margin:0 0 6px;">Shared by all populations of the same species in this paper.</div>
+      ${renderDemographics(pop.species)}
+    </div>` : ''}
   </div>` : ''}
   ${navBtns('paper','circuit')}`;
 }
@@ -916,9 +931,13 @@ function renderCircuit() {
   <div class="form-card ${cc()}">
     <div class="card-title">Method for Physiology Data</div>
     <div class="chip-grid">
-      ${['patch clamp','extracellular recording','microneurography','calcium imaging','tracing / anatomy','inferred from molecular profile'].map(m=>`
-        <div class="chip ${pop.physiologyMethod===m?'selected':''}" onclick="setSingle('physiologyMethod','${m}')">${m}</div>`).join('')}
+      ${CFG.methodPhysiology.map(m=>`<div class="chip ${pop.physiologyMethod===m?'selected':''}" onclick="setSingle('physiologyMethod','${m}')">${m}</div>`).join('')}
     </div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <input type="text" id="f-physio-method-other" placeholder="other method…" style="max-width:240px;">
+      <button class="add-btn-sm" onclick="addOtherSingle('physiologyMethod','f-physio-method-other')">Add</button>
+    </div>
+    ${otherSingleChip('physiologyMethod', CFG.methodPhysiology)}
   </div>
   ${navBtns('identity','location')}`;
 }
@@ -971,6 +990,11 @@ function renderLocation() {
     <div class="chip-grid">
       ${CFG.methodLocation.map(m=>`<div class="chip ${pop.locationMethod===m?'selected':''}" onclick="setSingle('locationMethod','${m}')">${m}</div>`).join('')}
     </div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <input type="text" id="f-loc-method-other" placeholder="other method…" style="max-width:240px;">
+      <button class="add-btn-sm" onclick="addOtherSingle('locationMethod','f-loc-method-other')">Add</button>
+    </div>
+    ${otherSingleChip('locationMethod', CFG.methodLocation)}
   </div>
 
   <div class="form-card ${cc()}">
@@ -1033,6 +1057,13 @@ function renderLocation() {
   ${navBtns('circuit','molecular')}`;
 }
 
+function locCard(field, i, val, presets) {
+  return `<div class="loc-card" id="lc-${field}-${i}">
+    <input type="text" value="${e(val)}" placeholder="location name"
+      onchange="updateLocEntry('${field}',${i},this.value)">
+    <button class="remove-btn" onclick="removeLocEntry('${field}',${i})" title="Remove">✕</button>
+  </div>`;
+}
 
 function renderMolecular() {
   const pop = cp();
@@ -1184,6 +1215,11 @@ function saveCurrent() {
   const pop = cp();
   const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
 
+  // subject age ranges can appear on the paper or identity section
+  document.querySelectorAll('input[data-demo-age]').forEach(el => {
+    getDemo(el.dataset.species).ageRange = el.value.trim();
+  });
+
   if (s==='paper') {
     state.paper.firstAuthor  = gv('f-first-author');
     state.paper.year         = gv('f-year');
@@ -1301,6 +1337,72 @@ function setSingle(field, val) {
   saveCurrent(); render();
 }
 
+// Free-text value for a single-select field (e.g. a method not in the preset list)
+function addOtherSingle(field, inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const val = el.value.trim();
+  if (!val) return;
+  cp()[field] = val;
+  saveCurrent();
+  el.value = '';
+  render();
+}
+
+function clearSingle(field) {
+  cp()[field] = '';
+  saveCurrent(); render();
+}
+
+function otherSingleChip(field, options) {
+  const v = cp()[field];
+  if (!v || options.includes(v)) return '';
+  return `<div style="margin-top:6px;" class="chip-grid">
+    <div class="chip selected" style="background:#555;border-color:#555;">${e(v)} <span onclick="clearSingle('${field}')" style="cursor:pointer;margin-left:4px;opacity:.8">✕</span></div>
+  </div>`;
+}
+
+// ── Subject demographics — stored per species on the paper ──
+function paperSpeciesList() {
+  if (state.paper.sameSpecies===true)  return state.paper.sharedSpecies||[];
+  if (state.paper.sameSpecies===false) return [...new Set(state.populations.flatMap(p=>p.species||[]))];
+  return [];
+}
+
+function getDemo(sp) {
+  if (!state.paper.demographics) state.paper.demographics = {};
+  if (!state.paper.demographics[sp]) state.paper.demographics[sp] = { ageRange:'', sex:[] };
+  return state.paper.demographics[sp];
+}
+
+function renderDemographics(speciesList) {
+  const demo = state.paper.demographics || {};
+  return `<div class="feature-list">${speciesList.map(sp => {
+    const d = demo[sp] || {};
+    return `<div class="loc-card" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);">
+      <div style="grid-column:1/-1;font-size:13px;font-weight:500;">${e(sp)}</div>
+      <div>
+        <div class="feat-label">Age range</div>
+        <input type="text" data-demo-age data-species="${e(sp)}" value="${e(d.ageRange)}" placeholder="e.g. P21–P35, 8–12 weeks, adult">
+      </div>
+      <div>
+        <div class="feat-label">Sex</div>
+        <div class="chip-grid" style="margin-top:0;">
+          ${(CFG.sex||[]).map(x=>`<div class="chip ${(d.sex||[]).includes(x)?'selected':''}" data-species="${e(sp)}" onclick="toggleDemoSex(this.dataset.species,'${x}')">${x}</div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function toggleDemoSex(sp, val) {
+  saveCurrent();
+  const d = getDemo(sp);
+  const idx = d.sex.indexOf(val);
+  if (idx>=0) d.sex.splice(idx,1); else d.sex.push(val);
+  render();
+}
+
 function setSensory(val) {
   const pop = cp();
   const prev = pop.isSensory;
@@ -1324,6 +1426,7 @@ function setSameSpecies(val) {
 }
 
 function toggleSharedSpecies(val) {
+  saveCurrent();
   if (!state.paper.sharedSpecies) state.paper.sharedSpecies = [];
   const idx = state.paper.sharedSpecies.indexOf(val);
   if (idx>=0) state.paper.sharedSpecies.splice(idx,1);
@@ -1488,6 +1591,7 @@ function buildRows() {
 
     // ms 3: location / morphology
     const hasLocation = pop.somaLocation ||
+      (pop.somaLocations||[]).some(x=>x.value) ||
       (pop.axonLocations||[]).some(x=>x.value) ||
       (pop.axonLeadingToSensory||[]).some(x=>x.value) ||
       (pop.sensoryTerminal||[]).some(x=>x.value) ||
@@ -1540,6 +1644,14 @@ function buildRows() {
       if (sp) {
         const s = IRI.species[sp]||{};
         rows.push({ neuronId, relationType:'species', valueLabel:sp, npoProperty:s.npo||'ilxtr:hasInstanceInTaxon', iri:s.iri||'', methodSet:'', intersect:'', modifier:'', method:'' });
+        const d = (state.paper.demographics||{})[sp];
+        if (d && d.ageRange) {
+          rows.push({ neuronId, relationType:'age range', valueLabel:d.ageRange, npoProperty:'TEMP:hasAgeRange', iri:'', methodSet:'', intersect:'', modifier:'', method:'' });
+        }
+        ((d && d.sex) || []).forEach(x => {
+          const sx = (IRI.sex||{})[x]||{};
+          rows.push({ neuronId, relationType:'sex', valueLabel:x, npoProperty:sx.npo||'', iri:sx.iri||'', methodSet:'', intersect:'', modifier:'', method:'' });
+        });
       }
 
       // ── Neurotransmitter — no method currently, attach to location set ────
@@ -1821,7 +1933,7 @@ function newSession() {
   state = {
     currentSection: 'paper',
     currentPopIndex: 0,
-    paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[] },
+    paper: { firstAuthor:'', year:'', doi:'', dataAvailability:'', figureNote:'', sameSpecies:null, sharedSpecies:[], demographics:{} },
     populations: [newPop()],
   };
   hideBanner();
